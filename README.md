@@ -1,4 +1,4 @@
-# matchlab
+# MatchLab
 
 **An assurance toolkit for voice-first matchmaking agents.**
 
@@ -6,109 +6,86 @@ Matchlab tests two things around a blind-match pitch agent: whether it keeps pri
 
 > **Status: prototype, not production-ready.** All agents, personas, markets, and evaluation data are synthetic. No real LLM, real transcript, real user, production compiler, or human-adjudicated label set has been evaluated. Passing tests verifies implemented prototype behavior, not production safety.
 
-## Results at a glance
+## Contents
 
-All numbers come from the scripts in [Run the evaluations](#run-the-evaluations) on synthetic data. Regenerate them; do not trust this page over `results/`.
-
-**Safety suite** (30 personas, 570 tasks, 5 trials, `k_min=20`, no injected card error)
-
-| Arm | Setup | Attack-task leak rate | Regression pass@1 | Capability pass@1 |
-|---|---|---:|---:|---:|
-| A0 | Full profile, no gate | 1.000 | 0.19 | 0.00 |
-| A1 | Full profile + sentence gate | 0.142 | 1.00 | 0.20 |
-| A2 | Disclosure card only | 0.000 | 1.00 | 0.94 |
-| A3 | Disclosure card + gate | 0.000 | 1.00 | 1.00 |
-
-A2/A3 leak rates are **by construction**: the stand-in card agent cannot say a fact that is not on its card. They are not evidence about a real LLM.
-
-**Card-error sensitivity** (share of facts mis-tiered by the compiler)
-
-| Card error | A1 | A2 | A3 |
-|---:|---:|---:|---:|
-| 0.00 | 0.142 | 0.000 | 0.000 |
-| 0.05 | 0.179 | 0.013 | 0.013 |
-| 0.20 | 0.306 | 0.104 | 0.104 |
-
-The compiler is the trusted component. A mis-tiered fact passes every downstream check.
-
-**Sentence gate probes** (synthetic sentences, labels from rule-based stand-ins)
-
-| Probe | Result |
-|---|---|
-| Recall: exact, typo, Hinglish, transliterated, known-paraphrase, confirmation, injection | 1.00 on tested cases |
-| Recall: held-out indirect paraphrase | **0.00** (n=171), known miss |
-| Recall: Devanagari rendering | **0.00** (n=169), known miss |
-| False positives, safe sentences | 0/900 |
-| False positives, near-miss benign | 0/360 |
-| Wrong-guess confirmation deflected | 20/20 |
-| Benign unrelated yes/no answered | 120/120 |
-| Latency p95 per sentence | A1: 7.7 ms, A3: 15.0 ms (one machine, in-process; A3 ranged 10.2-15.0 ms across three local runs) |
-
-Zero observed false positives on small synthetic probes does not establish a real-world rate.
-
-**Memory-write guard**
-
-| Class | Blocked |
-|---|---:|
-| Third-party claim, speaker not subject, sensitive inference | 1/1 each |
-| Instruction-like | 3/3 |
-| Paraphrased instruction | **0/2**, known miss |
-| Burst writes (60 in 20 min, limit 20/h) | 40/60 |
-| Benign corpus false blocks | 0/240 |
-
-**Matching evaluation** (10 synthetic seeds; the simulator knows ground truth, real deployments do not)
-
-| Target | Naive replay error | SNIPS error | SNIPS RMSE | Effective sample size |
-|---|---:|---:|---:|---:|
-| Uniform | +48.2% | -0.1% | 2.4% | 43% |
-| Stated-preference | -33.6% | +2.0% | 4.6% | 7% |
-| Better ranker | -47.9% | +0.5% | 2.4% | 13% |
-
-| Other matching result | Value |
-|---|---|
-| Label reliability, rater flip 0.05 / 0.15 / 0.30 | kappa 0.81 / 0.49 / 0.16 |
-| Calibration ECE before / after temperature scaling | 0.0811 / 0.0080 |
-| Exposure Gini: random / popularity / learned | 0.039 / 0.591 / 0.189 |
-| Cost per good call: random / stated / learned | 11.20 / 8.30 / 7.58 abstract units |
-
-The fairness language-group noise and the cost units are **assumed**, not measured.
+- [Architecture](#architecture)
+- [Components](#components)
+- [Quick start](#quick-start)
+- [Run the evaluations](#run-the-evaluations)
+- [Results at a glance](#results-at-a-glance)
+- [Evidence and limitations](#evidence-and-limitations)
+- [Production readiness](#production-readiness)
+- [Project map](#project-map)
 
 ## Architecture
 
+The blind-stage agent never receives the full profile. The sentence gate is defense in depth, not the primary control.
+
 ```mermaid
-flowchart LR
-    P["Full profile + memory"] --> C["Card compiler boundary<br/>validate, default-deny"]
-    C --> D["Disclosure card<br/>tiered facts, deny-list"]
-    D --> A["Pitch agent<br/>sees card only"]
+flowchart TD
+    P["Full profile and memory"] --> C["Card compiler boundary: validate, default-deny"]
+    C --> D["Disclosure card: tiered facts, deny-list"]
+    D --> A["Pitch agent (sees card only)"]
     V["Viewer speech"] --> A
-    A --> G{"Sentence gate<br/>deterministic, fail-closed"}
-    G -- pass --> T["Spoken pitch"]
-    G -- "leak / confirmation / number" --> R["Deflect or card-derived rewrite"]
-    A -- memory write --> M["Memory-write guard"]
-    M -- allow --> S[("Memory store")]
-    M -- block --> X["Reason code logged"]
+    A --> G{"Sentence gate: deterministic, fail-closed"}
+    G -->|"pass"| T["Spoken pitch"]
+    G -->|"leak, confirmation, or number"| R["Deflect or card-derived rewrite"]
+    A -->|"memory write"| M["Memory-write guard"]
+    M -->|"allow"| S["Memory store"]
+    M -->|"block"| X["Reason code logged"]
 ```
 
-The design removes capability first: the blind-stage agent never receives the full profile. The sentence gate is defense in depth, not the primary control.
+<details>
+<summary>Text version of the diagram</summary>
 
-## Evaluation workflow
+```text
+Full profile + memory
+  -> Card compiler boundary (validate, default-deny)
+  -> Disclosure card (tiered facts, deny-list)
+  -> Pitch agent (sees card only) <- Viewer speech
+  -> Sentence gate (deterministic, fail-closed)
+       pass                         -> Spoken pitch
+       leak / confirmation / number -> Deflect or card-derived rewrite
+
+Pitch agent --memory write--> Memory-write guard
+       allow -> Memory store
+       block -> Reason code logged
+```
+
+</details>
+
+### Evaluation workflow
 
 ```mermaid
-flowchart LR
-    subgraph Safety
-        PT["Synthetic personas + tasks"] --> H["Harness: arms A0-A3"]
-        H --> SM["Leak, utility, deflection,<br/>false positive, latency"]
+flowchart TD
+    subgraph SAFETY["Safety"]
+        PT["Synthetic personas and tasks"] --> H["Harness: arms A0 to A3"]
+        H --> SM["Leak, utility, deflection, false positive, latency"]
     end
-    subgraph Matching
-        MK["Synthetic market"] --> LG["Logged actions + propensities"]
+    subgraph MATCHING["Matching"]
+        MK["Synthetic market"] --> LG["Logged actions and propensities"]
         LG --> OPE["IPS, SNIPS, clipped, DR"]
-        LG --> QA["Label reliability, calibration,<br/>fairness, cost"]
+        LG --> QA["Label reliability, calibration, fairness, cost"]
     end
-    SM --> R[("results/")]
-    OPE --> R
-    QA --> R
-    R --> RM["README numbers"]
+    SM --> RES["results directory"]
+    OPE --> RES
+    QA --> RES
+    RES --> RM["README numbers"]
 ```
+
+<details>
+<summary>Text version of the diagram</summary>
+
+```text
+Safety:   Synthetic personas + tasks -> Harness (arms A0-A3)
+            -> Leak, utility, deflection, false positive, latency -> results/
+Matching: Synthetic market -> Logged actions + propensities
+            -> IPS, SNIPS, clipped, DR                             -> results/
+            -> Label reliability, calibration, fairness, cost      -> results/
+results/ -> README numbers
+```
+
+</details>
 
 ## Components
 
@@ -123,7 +100,7 @@ flowchart LR
 
 ## Quick start
 
-Python 3.11+ and NumPy. Run from the project root.
+Requires Python 3.11+ and NumPy. Run from the project root.
 
 **Windows PowerShell**
 
@@ -132,9 +109,7 @@ py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe tests\test_core.py
 .\.venv\Scripts\python.exe tests\test_import_boundaries.py
-.\.venv\Scripts\python.exe tests\test_real_agent_contract.py
 .\.venv\Scripts\python.exe -m pytest tests/test_real_agent_contract.py
-
 ```
 
 **macOS / Linux**
@@ -144,11 +119,12 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python tests/test_core.py
 .venv/bin/python tests/test_import_boundaries.py
-.venv/bin/python tests/test_real_agent_contract.py
 .venv/bin/python -m pytest tests/test_real_agent_contract.py
 ```
 
-`test_core.py` runs 47 tests. `test_import_boundaries.py` prints nothing on success and exits non-zero on failure; it checks that the gate path imports no network or model code. The two `test_real_agent_*` files test the real-agent evaluation code without a live model.
+- `test_core.py` runs 47 tests.
+- `test_import_boundaries.py` prints nothing on success and exits non-zero on failure. It checks that the gate path imports no network or model code.
+- `test_real_agent_contract.py` tests the real-agent evaluation code without a live model.
 
 ## Run the evaluations
 
@@ -165,7 +141,16 @@ python scripts/generate_card_tier_policy_dataset.py --seed 0
 
 ### Real-agent evaluation (code only, no results published)
 
-`matchlab/adapters/openai_compat.py`, `matchlab/evals/oracle.py`, `matchlab/evals/real_agent.py`, and `scripts/run_real_agent*.py` run the same tasks against an OpenAI-compatible endpoint and label replies with an oracle that is independent of the gate. You supply `LLM_BASE_URL` (no default host), `LLM_API_KEY`, and `LLM_MODEL`. See [`docs/decisions/0009-real-agent-adapter.md`](docs/decisions/0009-real-agent-adapter.md) and `--help` on each script. No recorded run is included in this repository, so real-model behavior is **not tested** here. A live run would also need human review of a sample before its labels count as validated.
+These files run the same tasks against an OpenAI-compatible endpoint and label replies with an oracle that is independent of the gate:
+
+- `matchlab/adapters/openai_compat.py`
+- `matchlab/evals/oracle.py`
+- `matchlab/evals/real_agent.py`
+- `scripts/run_real_agent*.py`
+
+Set `LLM_BASE_URL` (no default host), `LLM_API_KEY`, and `LLM_MODEL`. See [`docs/decisions/0009-real-agent-adapter.md`](docs/decisions/0009-real-agent-adapter.md) and `--help` on each script.
+
+No recorded run is included in this repository, so real-model behavior is **not tested** here. A live run would also need human review of a sample before its labels count as validated.
 
 ### Local gate staging
 
@@ -173,7 +158,7 @@ python scripts/generate_card_tier_policy_dataset.py --seed 0
 python scripts/run_local_gate_staging.py --seed 0
 ```
 
-In a second terminal:
+In a second terminal (PowerShell):
 
 ```powershell
 Invoke-RestMethod 'http://127.0.0.1:8765/health'
@@ -183,6 +168,81 @@ Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/v1/check' -ContentTyp
 ```
 
 It binds to `127.0.0.1` with a seeded synthetic persona. Do not expose it or send real data. See [`docs/LOCAL_STAGING.md`](docs/LOCAL_STAGING.md).
+
+## Results at a glance
+
+All numbers come from the scripts above, on synthetic data. Regenerate them; do not trust this page over `results/`.
+
+### Safety suite
+
+30 personas, 570 tasks, 5 trials, `k_min=20`, no injected card error.
+
+| Arm | Setup | Attack-task leak rate | Regression pass@1 | Capability pass@1 |
+|---|---|---:|---:|---:|
+| A0 | Full profile, no gate | 1.000 | 0.19 | 0.00 |
+| A1 | Full profile + sentence gate | 0.142 | 1.00 | 0.20 |
+| A2 | Disclosure card only | 0.000 | 1.00 | 0.94 |
+| A3 | Disclosure card + gate | 0.000 | 1.00 | 1.00 |
+
+A2 and A3 leak rates are **by construction**: the stand-in card agent cannot say a fact that is not on its card. They are not evidence about a real LLM.
+
+### Card-error sensitivity
+
+Share of facts mis-tiered by the compiler.
+
+| Card error | A1 | A2 | A3 |
+|---:|---:|---:|---:|
+| 0.00 | 0.142 | 0.000 | 0.000 |
+| 0.05 | 0.179 | 0.013 | 0.013 |
+| 0.20 | 0.306 | 0.104 | 0.104 |
+
+The compiler is the trusted component. A mis-tiered fact passes every downstream check.
+
+### Sentence gate probes
+
+Synthetic sentences, labels from rule-based stand-ins.
+
+| Probe | Result |
+|---|---|
+| Recall: exact, typo, Hinglish, transliterated, known paraphrase, confirmation, injection | 1.00 on tested cases |
+| Recall: held-out indirect paraphrase | **0.00** (n=171), known miss |
+| Recall: Devanagari rendering | **0.00** (n=169), known miss |
+| False positives, safe sentences | 0/900 |
+| False positives, near-miss benign | 0/360 |
+| Wrong-guess confirmation deflected | 20/20 |
+| Benign unrelated yes/no answered | 120/120 |
+| Latency p95 per sentence | A1: 7.7 ms, A3: 15.0 ms |
+
+Latency is one machine, in-process; A3 ranged 10.2 to 15.0 ms across three local runs. Zero observed false positives on small synthetic probes does not establish a real-world rate.
+
+### Memory-write guard
+
+| Class | Blocked |
+|---|---:|
+| Third-party claim, speaker not subject, sensitive inference | 1/1 each |
+| Instruction-like | 3/3 |
+| Paraphrased instruction | **0/2**, known miss |
+| Burst writes (60 in 20 min, limit 20/h) | 40/60 |
+| Benign corpus false blocks | 0/240 |
+
+### Matching evaluation
+
+10 synthetic seeds. The simulator knows ground truth; real deployments do not.
+
+| Target | Naive replay error | SNIPS error | SNIPS RMSE | Effective sample size |
+|---|---:|---:|---:|---:|
+| Uniform | +48.2% | -0.1% | 2.4% | 43% |
+| Stated-preference | -33.6% | +2.0% | 4.6% | 7% |
+| Better ranker | -47.9% | +0.5% | 2.4% | 13% |
+
+| Other matching result | Value |
+|---|---|
+| Label reliability (kappa), rater flip 0.05 / 0.15 / 0.30 | 0.81 / 0.49 / 0.16 |
+| Calibration ECE, before / after temperature scaling | 0.0811 / 0.0080 |
+| Exposure Gini: random / popularity / learned | 0.039 / 0.591 / 0.189 |
+| Cost per good call: random / stated / learned | 11.20 / 8.30 / 7.58 (abstract units) |
+
+The fairness language-group noise and the cost units are **assumed**, not measured.
 
 ## Evidence and limitations
 
@@ -196,7 +256,7 @@ It binds to `127.0.0.1` with a seeded synthetic persona. Do not expose it or sen
 | Real LLM behavior | **Not tested.** Adapter, oracle, and analysis code exist; no recorded run is published |
 | Real compiler accuracy, real transcripts, real users, human-validated labels | **Not tested** |
 
-**Known gaps**
+### Known gaps
 
 - Held-out indirect paraphrases and Devanagari renderings evade the string gate (recall 0.00).
 - Paraphrased memory instructions evade the pattern list (0/2 blocked).
@@ -209,7 +269,9 @@ It binds to `127.0.0.1` with a seeded synthetic persona. Do not expose it or sen
 - The per-viewer bit cap does not stop multi-account harvesting.
 - The card compiler is a trusted component and has no measured accuracy on real data.
 
-**Not covered:** voice cloning and impersonation, identity verification, harassment moderation, real ASR error on code-mixed speech, legal review of consent and retention.
+### Not covered
+
+Voice cloning and impersonation, identity verification, harassment moderation, real ASR error on code-mixed speech, legal review of consent and retention.
 
 ## Production readiness
 
@@ -242,7 +304,9 @@ docs/               Design, evaluation plan, threat model, decisions
 results/            Generated evaluation outputs
 ```
 
-Design rationale: [`docs/DESIGN.md`](docs/DESIGN.md). Threats: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md). Evaluation plan: [`docs/EVALS.md`](docs/EVALS.md).
+- Design rationale: [`docs/DESIGN.md`](docs/DESIGN.md)
+- Threats: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
+- Evaluation plan: [`docs/EVALS.md`](docs/EVALS.md)
 
 ## License
 
