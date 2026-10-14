@@ -1,0 +1,14 @@
+item_id,category,expected_blind,expected_mutual,predicted_blind,predicted_mutual,confidence_blind,confidence_mutual,prediction_status,label_basis,prediction_source
+policy-employer-001,employer,coarse,exact,coarse,exact,,,supported_by_standin,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-city-002,city,coarse,exact,coarse,exact,,,supported_by_standin,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-school-003,school,never,exact,never,exact,,,supported_by_standin,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-religion-004,religion,never,never,never,never,,,supported_by_standin,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-health-005,health,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-sexual_orientation-006,sexual_orientation,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-caste-007,caste,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-politics-008,politics,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-immigration-009,immigration,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-finances-010,finances,never,never,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-hobby-011,hobby,exact,exact,exact,exact,,,supported_by_standin,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-sector-012,sector,exact,exact,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
+policy-region-013,region,exact,exact,unknown,unknown,,,unsupported,approved_policy_rubric,synthetic_rule_based_standin.compile_card
