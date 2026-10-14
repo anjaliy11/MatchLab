@@ -2,7 +2,7 @@
 
 **An assurance toolkit for voice-first matchmaking agents.**
 
-In a blind-match product, an agent pitches one person to another before photos or names are shown. matchlab tests two things around that agent:
+In a blind-match product or dating apps, an agent pitches one person to another before photos or names are shown. MatchLab tests two things around that agent:
 
 1. **Privacy:** does the agent keep private facts private, and what does that cost in usefulness?
 2. **Matching:** would a new matching policy have beaten the old one, judged only from logged outcomes?
@@ -60,6 +60,17 @@ flowchart LR
     QA --> RES
     RES --> RM["README numbers"]
 ```
+
+## Where it fits in voice-first matchmaking
+
+The hard problems in this space are voice understanding, two-sided matching, taste that changes as context grows, and the memory, eval, and cost work around them. matchlab does not build the matcher or the voice model. It covers the parts that decide whether those systems can be trusted and shipped.
+
+| Problem | What matchlab does | What it does not do |
+|---|---|---|
+| Understanding intent and personality from voice | Controls what a voice agent may say about a person: it sees a disclosure card, never the full profile, and every sentence passes a fail-closed gate. Probes cover Hinglish and Devanagari. | No voice or personality model. Real ASR error on code-mixed speech is unmeasured. |
+| Bidirectional matching | Judges a new two-sided ranker from logs. On simulated logs, naive replay is off by 34% to 48%; SNIPS stays within 2%. Reports label reliability (kappa 0.49 at 15% rater flip), calibration, and exposure Gini. | No ranker. Real logs untested. |
+| Taste that updates as context grows | Memory-write guard keeps the accumulating profile trustworthy: provenance, speaker vs subject, sensitive-inference block, instruction-like text, rate limit. Offline evaluation checks an updated policy before it ships. | No taste model. The guard misses paraphrased instructions (0/2 blocked). |
+| Memory, evals, cost | Eval harness with four arms, an independent oracle for real-agent runs, p95 gate latency, and cost per good call (abstract units, assumed). | No real LLM run published. |
 
 ## Quick start
 
