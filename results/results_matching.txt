@@ -1,0 +1,44 @@
+
+== 1. Off-policy evaluation: estimate a NEW ranker's good-calls-per-pitch from logs of the OLD one
+   (relative error vs ground truth, mean over seeds; replay = naive average of logged outcomes)
+   target            truth   replay     IPS   SNIPS  clip10      DR   ESS%
+   uniform          0.1323   +48.2%   -0.1%   -0.1%   -0.1%   +0.3%    43%
+   stated_ranker    0.2953   -33.6%   +1.9%   +2.0%   -3.6%   +1.3%     7%
+   better_ranker    0.3766   -47.9%   -0.5%   +0.5%   -6.7%   -0.9%    13%
+   RMSE of relative error across seeds:
+     replay       48.4%     33.6%     48.0%
+     ips           2.3%      5.9%      3.2%
+     snips         2.4%      4.6%      2.4%
+     clipped       2.4%      5.4%      6.9%
+     dr            2.5%      5.0%      2.9%
+
+== 2. Reliability of the 'good conversation' label (two raters per call)
+    rater flip prob  agreement   kappa   alpha   max corr a model can show
+               0.05      0.904   0.806   0.806                       0.898
+               0.15      0.745   0.486   0.486                       0.697
+               0.30      0.580   0.159   0.159                       0.399
+
+== 3. Calibration: an over-confident yes-model, before and after temperature scaling
+   fitted temperature T = 1.80 (true miscalibration factor 1.8)
+   held-out ECE   before 0.0811   after 0.0080
+   held-out Brier before 0.1724   after 0.1640
+
+== 4. Fairness slices
+   4a. exposure inequality of pitched B users (Gini; 0 = equal), same exposure cap for all
+      random        0.039
+      popularity    0.591
+      learned_gpc   0.189
+   4b. voice-feature reliability by language group (SYNTHETIC noise levels, an assumption, not a measurement)
+      predictive AUC by group: {'english': 0.7521172576309462, 'hinglish': 0.6560193876119651}  gap = 0.096
+      parity check on assumed WER {'english': 0.08, 'hinglish': 0.30}: {'ratio': 3.75, 'abs_gap': 0.21999999999999997, 'flag': True}
+
+== 5. Cost per good call (abstract cost units; plug in real prices)
+   policy           pitch deliveries  good calls  cost/good call
+   random                      26924        2405           11.20
+   stated_compat               27924        3366            8.30
+   learned_gpc                 28610        3775            7.58
+   async LLM-judge overhead on top (judge costs 3 pitch-minutes per audited pitch), learned_gpc:
+      audit sample rate    0%: 7.58 per good call
+      audit sample rate    5%: 8.72 per good call
+      audit sample rate   25%: 13.26 per good call
+      audit sample rate  100%: 30.32 per good call

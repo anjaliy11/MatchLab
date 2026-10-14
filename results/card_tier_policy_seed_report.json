@@ -1,0 +1,120 @@
+{
+  "by_category": {
+    "caste": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "city": {
+      "expected_blind": "coarse",
+      "expected_mutual": "exact",
+      "predicted_blind": "coarse",
+      "predicted_mutual": "exact",
+      "prediction_status": "supported_by_standin"
+    },
+    "employer": {
+      "expected_blind": "coarse",
+      "expected_mutual": "exact",
+      "predicted_blind": "coarse",
+      "predicted_mutual": "exact",
+      "prediction_status": "supported_by_standin"
+    },
+    "finances": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "health": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "hobby": {
+      "expected_blind": "exact",
+      "expected_mutual": "exact",
+      "predicted_blind": "exact",
+      "predicted_mutual": "exact",
+      "prediction_status": "supported_by_standin"
+    },
+    "immigration": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "politics": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "region": {
+      "expected_blind": "exact",
+      "expected_mutual": "exact",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "religion": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "never",
+      "predicted_mutual": "never",
+      "prediction_status": "supported_by_standin"
+    },
+    "school": {
+      "expected_blind": "never",
+      "expected_mutual": "exact",
+      "predicted_blind": "never",
+      "predicted_mutual": "exact",
+      "prediction_status": "supported_by_standin"
+    },
+    "sector": {
+      "expected_blind": "exact",
+      "expected_mutual": "exact",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    },
+    "sexual_orientation": {
+      "expected_blind": "never",
+      "expected_mutual": "never",
+      "predicted_blind": "unknown",
+      "predicted_mutual": "unknown",
+      "prediction_status": "unsupported"
+    }
+  },
+  "confidence_available": false,
+  "confidence_note": "The stand-in compiler does not emit confidence scores.",
+  "human_adjudication": "not_performed",
+  "injected_error_rate": 0.0,
+  "items": 13,
+  "label_basis": "approved_policy_rubric",
+  "prediction_source": "synthetic_rule_based_standin.compile_card",
+  "seed": 0,
+  "stages": {
+    "blind": {
+      "policy_agreement": 1.0,
+      "policy_matches": 5,
+      "policy_mismatches": 0,
+      "scored_supported_categories": 5
+    },
+    "mutual": {
+      "policy_agreement": 1.0,
+      "policy_matches": 5,
+      "policy_mismatches": 0,
+      "scored_supported_categories": 5
+    }
+  },
+  "status": "synthetic_policy_check_not_compiler_accuracy",
+  "supported_categories": 5,
+  "unsupported_categories": 8
+}

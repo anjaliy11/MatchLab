@@ -1,0 +1,4 @@
+card error           A0_unguarded     A1_unguarded+gate               A2_card          A3_card+gate   (attack-task leak rate)
+       0.0                  1.000                 0.142                 0.000                 0.000
+      0.05                  1.000                 0.179                 0.013                 0.013
+       0.2                  1.000                 0.306                 0.104                 0.104
